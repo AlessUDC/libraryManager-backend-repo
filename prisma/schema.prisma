@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  LIBRARIAN
+  ADMINISTRATOR
+}
+
+model User {
+  userId     String   @id @default(uuid())
+  code       String   @unique
+  password   String
+  role       Role     @default(STUDENT)
+  
+  // Relation to UserData
+  userData   UserData @relation(fields: [userDataId], references: [userDataId])
+  userDataId String   @unique
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Specialized relations
+  student       Student?
+  teacher       Teacher?
+  librarian     Librarian?
+  administrator Administrator?
+}
+
+model UserData {
+  userDataId      String   @id @default(uuid())
+  name            String
+  paternalSurname String
+  maternalSurname String
+  documentNumber  String   @unique
+  maritalStatus   String?
+  gender          String?
+  activeState     Boolean  @default(true)
+  birthdate       DateTime
+  mobilePhone     String?
+  landlinePhone   String?
+  email           String   @unique
+
+  // Relations
+  address         Address? @relation(fields: [addressId], references: [addressId])
+  addressId       String?
+  district        District? @relation(fields: [districtId], references: [districtId])
+  districtId      String?
+
+  // Inverse relation to User
+  user            User?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Address {
+  addressId String     @id @default(uuid())
+  title     String
+  userData  UserData[]
+}
+
+model District {
+  districtId String     @id @default(uuid())
+  title      String
+  userData   UserData[]
+  
+  // Relation to Province
+  province   Province   @relation(fields: [provinceId], references: [provinceId])
+  provinceId String
+}
+
+model Province {
+  provinceId String     @id @default(uuid())
+  title      String
+  districts  District[]
+}
+
+model Faculty {
+  facultyId String    @id @default(uuid())
+  title     String
+  schools   School[]
+  teachers  Teacher[]
+}
+
+model School {
+  schoolId  String    @id @default(uuid())
+  title     String
+  faculty   Faculty   @relation(fields: [facultyId], references: [facultyId])
+  facultyId String
+  students  Student[]
+}
+
+model Student {
+  userId                String @id
+  user                  User   @relation(fields: [userId], references: [userId])
+  cycle                 Int
+  onTimeDeliveriesCount Int    @default(0)
+
+  // Relación con School
+  school                School @relation(fields: [schoolId], references: [schoolId])
+  schoolId              String
+}
+
+model Teacher {
+  userId    String @id
+  user      User   @relation(fields: [userId], references: [userId])
+
+  // Relación con Faculty
+  faculty   Faculty @relation(fields: [facultyId], references: [facultyId])
+  facultyId String
+}
+
+model Librarian {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [userId])
+  shift          String
+  dateAssignment DateTime @default(now())
+}
+
+model Administrator {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [userId])
+  dateAssignment DateTime @default(now())
+}
