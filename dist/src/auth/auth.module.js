@@ -10,14 +10,29 @@ exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const auth_controller_1 = require("./auth.controller");
-const prisma_service_1 = require("../prisma.service");
+const users_module_1 = require("../modules/users/users.module");
+const jwt_1 = require("@nestjs/jwt");
+const config_1 = require("@nestjs/config");
+const auth_guard_1 = require("./auth.guard");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
+        imports: [
+            users_module_1.UsersModule,
+            config_1.ConfigModule,
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: (configService) => ({
+                    secret: configService.get('JWT_SECRET'),
+                    signOptions: { expiresIn: '180d' },
+                }),
+            }),
+        ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, prisma_service_1.PrismaService],
+        providers: [auth_service_1.AuthService, auth_guard_1.AuthGuard],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

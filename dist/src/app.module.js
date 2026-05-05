@@ -9,8 +9,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const prisma_service_1 = require("./prisma.service");
+const schedule_1 = require("@nestjs/schedule");
 const auth_module_1 = require("./auth/auth.module");
+const metadata_module_1 = require("./modules/metadata/metadata.module");
+const users_module_1 = require("./modules/users/users.module");
+const mail_module_1 = require("./modules/mail/mail.module");
+const prisma_module_1 = require("./modules/prisma/prisma.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -20,11 +24,15 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
             }),
+            schedule_1.ScheduleModule.forRoot(),
+            prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
+            metadata_module_1.MetadataModule,
+            users_module_1.UsersModule,
+            mail_module_1.MailModule,
         ],
         controllers: [],
-        providers: [prisma_service_1.PrismaService],
-        exports: [prisma_service_1.PrismaService],
+        providers: [],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

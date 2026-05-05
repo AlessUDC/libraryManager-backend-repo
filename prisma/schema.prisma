@@ -21,6 +21,16 @@ model User {
   code       String   @unique
   password   String
   role       Role     @default(STUDENT)
+  isConfirmed Boolean @default(false)
+  confirmationToken String?
+  tokenExpiration DateTime?
+  resendCount Int @default(0)
+  
+  // Forgot Password fields
+  resetPasswordToken String?
+  resetPasswordExpires DateTime?
+  resetPasswordResendCount Int @default(0)
+  lastPasswordReset DateTime?
   
   // Relation to UserData
   userData   UserData @relation(fields: [userDataId], references: [userDataId])

@@ -21,7 +21,7 @@ const adapter_pg_1 = require("@prisma/adapter-pg");
 const pg_1 = require("pg");
 let PrismaService = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
-        const pool = new pg_1.Pool({ connectionString: configService.get('DATAB5ASE_URL') });
+        const pool = new pg_1.Pool({ connectionString: configService.get('DATABASE_URL') });
         const adapter = new adapter_pg_1.PrismaPg(pool);
         super({ adapter });
     }
