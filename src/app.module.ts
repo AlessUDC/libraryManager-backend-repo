@@ -6,6 +6,7 @@ import { MetadataModule } from './modules/metadata/metadata.module';
 import { UsersModule } from './modules/users/users.module';
 import { MailModule } from './modules/mail/mail.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { BooksModule } from './modules/books/books.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     MetadataModule,
     UsersModule,
     MailModule,
+    BooksModule,
   ],
   controllers: [],
   providers: [],

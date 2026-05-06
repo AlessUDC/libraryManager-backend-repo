@@ -242,4 +242,34 @@ export class UsersService {
       }
     });
   }
+
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+      include: { userData: true }
+    });
+
+    if (!user) return;
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Eliminar registros especializados
+      await tx.student.deleteMany({ where: { userId } });
+      await tx.teacher.deleteMany({ where: { userId } });
+      await tx.librarian.deleteMany({ where: { userId } });
+      await tx.administrator.deleteMany({ where: { userId } });
+
+      // 2. Eliminar el usuario
+      await tx.user.delete({ where: { userId } });
+
+      // 3. Eliminar UserData
+      if (user.userDataId) {
+        await tx.userData.delete({ where: { userDataId: user.userDataId } });
+      }
+
+      // 4. Eliminar Address si existía
+      if (user.userData?.addressId) {
+        await tx.address.delete({ where: { addressId: user.userData.addressId } });
+      }
+    });
+  }
 }

@@ -142,3 +142,68 @@ model Administrator {
   user           User     @relation(fields: [userId], references: [userId])
   dateAssignment DateTime @default(now())
 }
+
+enum CopyStatus {
+  AVAILABLE
+  LENT
+  RESERVED
+  MAINTENANCE
+}
+
+enum CopyCondition {
+  NEW
+  GOOD
+  DAMAGED
+  LOST
+}
+
+model Category {
+  categoryId  String   @id @default(uuid())
+  title       String
+  activeState Boolean  @default(true)
+  books       Book[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Author {
+  authorId    String   @id @default(uuid())
+  name        String
+  nationality String?
+  biography   String?
+  activeState Boolean  @default(true)
+  books       Book[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Book {
+  bookId          String     @id @default(uuid())
+  title           String
+  isbn            String?    @unique
+  publisher       String?
+  publicationYear Int?
+  edition         String?
+  language        String?
+  description     String?
+  coverUrl        String?
+  activeState     Boolean    @default(true)
+  categories      Category[]
+  authors         Author[]
+  copies          Copy[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Copy {
+  copyId      String        @id @default(uuid())
+  barcode     String        @unique
+  location    String?
+  status      CopyStatus    @default(AVAILABLE)
+  condition   CopyCondition @default(NEW)
+  activeState Boolean       @default(true)
+  book        Book          @relation(fields: [bookId], references: [bookId])
+  bookId      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
