@@ -19,6 +19,7 @@ enum Role {
 model User {
   userId     String   @id @default(uuid())
   code       String   @unique
+  slug       String?  @unique
   password   String
   role       Role     @default(STUDENT)
   isConfirmed Boolean @default(false)
@@ -44,6 +45,7 @@ model User {
   teacher       Teacher?
   librarian     Librarian?
   administrator Administrator?
+  loans         Loan[]
 }
 
 model UserData {
@@ -169,6 +171,7 @@ model Category {
 model Author {
   authorId    String   @id @default(uuid())
   name        String
+  slug        String?  @unique
   nationality String?
   biography   String?
   activeState Boolean  @default(true)
@@ -180,13 +183,13 @@ model Author {
 model Book {
   bookId          String     @id @default(uuid())
   title           String
+  slug            String     @unique
   isbn            String?    @unique
   publisher       String?
   publicationYear Int?
   edition         String?
   language        String?
   description     String?
-  coverUrl        String?
   activeState     Boolean    @default(true)
   categories      Category[]
   authors         Author[]
@@ -204,6 +207,27 @@ model Copy {
   activeState Boolean       @default(true)
   book        Book          @relation(fields: [bookId], references: [bookId])
   bookId      String
+  loans       Loan[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+}
+
+model Loan {
+  loanId      String     @id @default(uuid())
+  user        User       @relation(fields: [userId], references: [userId])
+  userId      String
+  copy        Copy       @relation(fields: [copyId], references: [copyId])
+  copyId      String
+  borrowDate  DateTime   @default(now())
+  dueDate     DateTime
+  returnDate  DateTime?
+  status      LoanStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }

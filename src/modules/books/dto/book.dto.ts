@@ -29,10 +29,6 @@ export class CreateBookDto {
   @IsOptional()
   description?: string;
 
-  @IsString({ message: 'La URL de la portada debe ser una cadena de texto' })
-  @IsOptional()
-  coverUrl?: string;
-
   @IsBoolean({ message: 'El estado debe ser un valor booleano' })
   @IsOptional()
   activeState?: boolean;
@@ -76,10 +72,6 @@ export class UpdateBookDto {
   @IsString({ message: 'La descripción debe ser una cadena de texto' })
   @IsOptional()
   description?: string;
-
-  @IsString({ message: 'La URL de la portada debe ser una cadena de texto' })
-  @IsOptional()
-  coverUrl?: string;
 
   @IsBoolean({ message: 'El estado debe ser un valor booleano' })
   @IsOptional()

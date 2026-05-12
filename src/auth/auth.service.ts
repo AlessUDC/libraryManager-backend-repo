@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,8 +23,7 @@ export class AuthService {
   ) {}
 
   async register(dto: CreateAccountDto) {
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    return this.usersService.createAccount(dto, hashedPassword);
+    return this.usersService.createAccount(dto);
   }
 
   async confirmAccount(dto: ConfirmAccountDto) {
@@ -36,6 +36,27 @@ export class AuthService {
 
     await this.usersService.confirmAccount(user.userId);
     return { message: 'Cuenta confirmada correctamente' };
+  }
+
+  async activateAccount(dto: ActivateAccountDto) {
+    const { token, password, passwordConfirmation } = dto;
+
+    if (password !== passwordConfirmation) {
+      throw new ForbiddenException('Las contraseñas no coinciden');
+    }
+
+    const user = await this.usersService.findByConfirmationToken(token);
+    if (!user) {
+      throw new UnauthorizedException('El enlace de activación es inválido');
+    }
+
+    this.assertTokenNotExpired(user.tokenExpiration, 'El enlace de activación ha expirado');
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await this.usersService.updatePassword(user.userId, hashedPassword);
+    await this.usersService.confirmAccount(user.userId);
+
+    return { message: 'Cuenta activada correctamente. Ya puedes iniciar sesión.' };
   }
 
   async resendToken(dto: ResendTokenDto) {
@@ -122,6 +143,10 @@ export class AuthService {
       throw new ForbiddenException('Debes confirmar tu cuenta antes de poder iniciar sesión');
     }
 
+    if (user.userData.activeState === false) {
+      throw new ForbiddenException('Tu cuenta está desactivada. Por favor, contacta con el administrador.');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('El código de usuario o la contraseña son incorrectos');
@@ -131,7 +156,7 @@ export class AuthService {
     return {
       message: 'Inicio de sesión exitoso',
       token,
-      user: { id: user.userId, role: user.role }
+      user: { id: user.userId, role: user.role, name: user.userData.name }
     };
   }
 

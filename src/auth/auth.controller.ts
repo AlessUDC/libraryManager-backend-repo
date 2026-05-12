@@ -9,6 +9,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 import { AuthGuard } from './auth.guard';
 import type { RequestWithUser } from './interfaces/request-with-user.interface';
 
@@ -46,6 +47,11 @@ export class AuthController {
   @Post('confirm')
   async confirm(@Body() confirmAccountDto: ConfirmAccountDto) {
     return this.authService.confirmAccount(confirmAccountDto);
+  }
+
+  @Post('activate-account')
+  async activateAccount(@Body() activateAccountDto: ActivateAccountDto) {
+    return this.authService.activateAccount(activateAccountDto);
   }
 
   @Post('resend-token')

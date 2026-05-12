@@ -49,10 +49,6 @@ export class CreateAccountDto {
   @Matches(/^[0-9]+$/, { message: 'El código solo debe contener números' })
   code: string;
 
-  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'La contraseña es obligatoria' })
-  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
-  password: string;
 
   @IsEnum(Role, { message: 'Rol no válido' })
   @IsOptional()

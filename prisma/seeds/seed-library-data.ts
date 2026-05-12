@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaClient, CopyStatus, CopyCondition } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { generateSlug } from '../../src/common/utils/slug';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -101,6 +102,7 @@ async function main() {
       book = await prisma.book.create({
         data: {
           title: b.title,
+          slug: generateSlug(b.title),
           isbn: b.isbn,
           publisher: b.publisher,
           publicationYear: b.publicationYear,
