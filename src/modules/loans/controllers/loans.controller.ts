@@ -1,6 +1,15 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { LoansService } from '../services/loans.service';
-import { CreateLoanDto } from '../dto/loan.dto';
+import { CreateLoanDto, ReturnLoanDto } from '../dto/loan.dto';
 
 @Controller('loans')
 export class LoansController {
@@ -22,7 +31,7 @@ export class LoansController {
   }
 
   @Patch(':id/return')
-  returnLoan(@Param('id') id: string) {
-    return this.loansService.returnLoan(id);
+  returnLoan(@Param('id') id: string, @Body() returnDto: ReturnLoanDto) {
+    return this.loansService.returnLoan(id, returnDto);
   }
 }

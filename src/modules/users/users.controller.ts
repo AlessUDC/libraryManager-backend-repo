@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -20,7 +30,24 @@ export class UsersController {
 
   @Post()
   @Roles(Role.ADMINISTRATOR)
-  async create(@Body() createUserDto: any) {
+  async create(
+    @Body()
+    createUserDto: {
+      email: string;
+      code: string;
+      documentNumber: string;
+      role?: Role;
+      birthdate: string;
+      documentType?: string;
+      schoolId?: string;
+      facultyId?: string;
+      cycle?: number;
+      address?: string;
+      provinceId?: string;
+      shift?: string;
+      [key: string]: unknown;
+    },
+  ) {
     return this.usersService.createByAdmin(createUserDto);
   }
 

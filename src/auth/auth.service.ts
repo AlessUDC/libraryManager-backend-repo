@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { ConfirmAccountDto } from './dto/confirm-account.dto';
 import * as bcrypt from 'bcrypt';
@@ -19,7 +23,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private mailService: MailService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) {}
 
   async register(dto: CreateAccountDto) {
@@ -31,8 +35,15 @@ export class AuthService {
     const user = await this.requireUserByEmail(email);
 
     this.assertUnconfirmed(user);
-    this.assertTokenValid(user.confirmationToken, token, 'El código de confirmación es incorrecto');
-    this.assertTokenNotExpired(user.tokenExpiration, 'El código de confirmación ha expirado');
+    this.assertTokenValid(
+      user.confirmationToken,
+      token,
+      'El código de confirmación es incorrecto',
+    );
+    this.assertTokenNotExpired(
+      user.tokenExpiration,
+      'El código de confirmación ha expirado',
+    );
 
     await this.usersService.confirmAccount(user.userId);
     return { message: 'Cuenta confirmada correctamente' };
@@ -50,13 +61,18 @@ export class AuthService {
       throw new UnauthorizedException('El enlace de activación es inválido');
     }
 
-    this.assertTokenNotExpired(user.tokenExpiration, 'El enlace de activación ha expirado');
+    this.assertTokenNotExpired(
+      user.tokenExpiration,
+      'El enlace de activación ha expirado',
+    );
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await this.usersService.updatePassword(user.userId, hashedPassword);
     await this.usersService.confirmAccount(user.userId);
 
-    return { message: 'Cuenta activada correctamente. Ya puedes iniciar sesión.' };
+    return {
+      message: 'Cuenta activada correctamente. Ya puedes iniciar sesión.',
+    };
   }
 
   async resendToken(dto: ResendTokenDto) {
@@ -70,7 +86,11 @@ export class AuthService {
     }
 
     const { token, expiration } = this.generateOtp(7);
-    await this.usersService.renewConfirmationToken(user.userId, token, expiration);
+    await this.usersService.renewConfirmationToken(
+      user.userId,
+      token,
+      expiration,
+    );
     await this.mailService.sendConfirmationEmail(email, token);
 
     return { message: 'Se ha enviado un nuevo código a tu correo' };
@@ -81,14 +101,18 @@ export class AuthService {
     const user = await this.requireUserByEmail(email);
 
     if (!user.isConfirmed) {
-      throw new ForbiddenException('Debes confirmar tu cuenta antes de poder reestablecer tu contraseña');
+      throw new ForbiddenException(
+        'Debes confirmar tu cuenta antes de poder reestablecer tu contraseña',
+      );
     }
 
     if (user.lastPasswordReset) {
       const twelveHoursAgo = new Date();
       twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
       if (user.lastPasswordReset > twelveHoursAgo) {
-        throw new ForbiddenException('Solo puedes reestablecer tu contraseña una vez cada 12 horas');
+        throw new ForbiddenException(
+          'Solo puedes reestablecer tu contraseña una vez cada 12 horas',
+        );
       }
     }
 
@@ -97,7 +121,12 @@ export class AuthService {
     }
 
     const { token, expiration } = this.generateOtp(10);
-    await this.usersService.setPasswordResetToken(user.userId, token, expiration, !!user.resetPasswordToken);
+    await this.usersService.setPasswordResetToken(
+      user.userId,
+      token,
+      expiration,
+      !!user.resetPasswordToken,
+    );
     await this.mailService.sendPasswordResetEmail(email, token);
 
     return { message: 'Se han enviado las instrucciones a tu correo' };
@@ -107,8 +136,15 @@ export class AuthService {
     const { email, token } = dto;
     const user = await this.requireUserByEmail(email);
 
-    this.assertTokenValid(user.resetPasswordToken, token, 'El código de recuperación es incorrecto para este correo');
-    this.assertTokenNotExpired(user.resetPasswordExpires, 'El código de recuperación ha expirado');
+    this.assertTokenValid(
+      user.resetPasswordToken,
+      token,
+      'El código de recuperación es incorrecto para este correo',
+    );
+    this.assertTokenNotExpired(
+      user.resetPasswordExpires,
+      'El código de recuperación ha expirado',
+    );
 
     return { message: 'Código verificado correctamente' };
   }
@@ -122,8 +158,15 @@ export class AuthService {
 
     const user = await this.requireUserByEmail(email);
 
-    this.assertTokenValid(user.resetPasswordToken, token, 'El código de recuperación es incorrecto para este correo');
-    this.assertTokenNotExpired(user.resetPasswordExpires, 'El código de recuperación ha expirado');
+    this.assertTokenValid(
+      user.resetPasswordToken,
+      token,
+      'El código de recuperación es incorrecto para este correo',
+    );
+    this.assertTokenNotExpired(
+      user.resetPasswordExpires,
+      'El código de recuperación ha expirado',
+    );
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await this.usersService.updatePassword(user.userId, hashedPassword);
@@ -136,27 +179,35 @@ export class AuthService {
     const user = await this.usersService.findByCode(code);
 
     if (!user) {
-      throw new UnauthorizedException('El código de usuario o la contraseña son incorrectos');
+      throw new UnauthorizedException(
+        'El código de usuario o la contraseña son incorrectos',
+      );
     }
 
     if (!user.isConfirmed) {
-      throw new ForbiddenException('Debes confirmar tu cuenta antes de poder iniciar sesión');
+      throw new ForbiddenException(
+        'Debes confirmar tu cuenta antes de poder iniciar sesión',
+      );
     }
 
     if (user.userData.activeState === false) {
-      throw new ForbiddenException('Tu cuenta está desactivada. Por favor, contacta con el administrador.');
+      throw new ForbiddenException(
+        'Tu cuenta está desactivada. Por favor, contacta con el administrador.',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('El código de usuario o la contraseña son incorrectos');
+      throw new UnauthorizedException(
+        'El código de usuario o la contraseña son incorrectos',
+      );
     }
 
     const token = this.jwtService.sign({ sub: user.userId, role: user.role });
     return {
       message: 'Inicio de sesión exitoso',
       token,
-      user: { id: user.userId, role: user.role, name: user.userData.name }
+      user: { id: user.userId, role: user.role, name: user.userData.name },
     };
   }
 
@@ -164,7 +215,8 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
 
-    const { password, confirmationToken, resetPasswordToken, ...userProfile } = user;
+    const { password, confirmationToken, resetPasswordToken, ...userProfile } =
+      user;
     return userProfile;
   }
 
@@ -191,7 +243,10 @@ export class AuthService {
 
   private async requireUserByEmail(email: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) throw new UnauthorizedException('El correo electrónico no está registrado');
+    if (!user)
+      throw new UnauthorizedException(
+        'El correo electrónico no está registrado',
+      );
     return user;
   }
 
@@ -201,13 +256,20 @@ export class AuthService {
     }
   }
 
-  private assertTokenValid(stored: string | null | undefined, received: string, message: string) {
+  private assertTokenValid(
+    stored: string | null | undefined,
+    received: string,
+    message: string,
+  ) {
     if (!stored || stored !== received) {
       throw new UnauthorizedException(message);
     }
   }
 
-  private assertTokenNotExpired(expiration: Date | null | undefined, message: string) {
+  private assertTokenNotExpired(
+    expiration: Date | null | undefined,
+    message: string,
+  ) {
     if (expiration && new Date() > expiration) {
       throw new UnauthorizedException(message);
     }

@@ -1,4 +1,14 @@
-import { IsNotEmpty, IsString, IsBoolean, IsOptional, IsEnum, IsUUID, IsInt, Min, Max } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsEnum,
+  IsUUID,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { CopyStatus, CopyCondition } from '@prisma/client';
 
 export class CreateCopyDto {

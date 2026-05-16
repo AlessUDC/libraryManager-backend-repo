@@ -9,20 +9,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [
-    BooksController,
-    CategoriesController,
-    AuthorsController
-  ],
-  providers: [
-    BooksService,
-    CategoriesService,
-    AuthorsService
-  ],
-  exports: [
-    BooksService,
-    CategoriesService,
-    AuthorsService
-  ]
+  controllers: [BooksController, CategoriesController, AuthorsController],
+  providers: [BooksService, CategoriesService, AuthorsService],
+  exports: [BooksService, CategoriesService, AuthorsService],
 })
 export class BooksModule {}

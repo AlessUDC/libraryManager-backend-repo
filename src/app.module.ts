@@ -9,6 +9,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { BooksModule } from './modules/books/books.module';
 import { LoansModule } from './modules/loans/loans.module';
 import { StatsModule } from './modules/stats/stats.module';
+import { ReservationsModule } from './modules/reservations/reservations.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { StatsModule } from './modules/stats/stats.module';
     BooksModule,
     LoansModule,
     StatsModule,
+    ReservationsModule,
   ],
   controllers: [],
   providers: [],

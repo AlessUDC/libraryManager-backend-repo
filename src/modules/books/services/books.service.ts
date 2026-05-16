@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBookDto, UpdateBookDto } from '../dto/book.dto';
 import { CreateCopyDto, UpdateCopyDto } from '../dto/copy.dto';
@@ -12,23 +16,27 @@ export class BooksService {
   async createBook(createBookDto: CreateBookDto) {
     const { categoryIds, authorIds, ...bookData } = createBookDto;
     const slug = generateSlug(bookData.title);
-    
+
     return this.prisma.book.create({
       data: {
         ...bookData,
         slug,
-        categories: categoryIds ? {
-          connect: categoryIds.map(id => ({ categoryId: id }))
-        } : undefined,
-        authors: authorIds ? {
-          connect: authorIds.map(id => ({ authorId: id }))
-        } : undefined,
+        categories: categoryIds
+          ? {
+              connect: categoryIds.map((id) => ({ categoryId: id })),
+            }
+          : undefined,
+        authors: authorIds
+          ? {
+              connect: authorIds.map((id) => ({ authorId: id })),
+            }
+          : undefined,
       },
       include: {
         categories: true,
         authors: true,
-        copies: true
-      }
+        copies: true,
+      },
     });
   }
 
@@ -40,18 +48,18 @@ export class BooksService {
         authors: true,
         copies: {
           where: { activeState: true },
-          select: { status: true }
-        }
+          select: { status: true },
+        },
       },
-      orderBy: { title: 'asc' }
+      orderBy: { title: 'asc' },
     });
 
-    return books.map(book => {
+    return books.map((book) => {
       const { copies, ...rest } = book;
       return {
         ...rest,
         totalCopies: copies.length,
-        availableCopies: copies.filter(c => c.status === 'AVAILABLE').length
+        availableCopies: copies.filter((c) => c.status === 'AVAILABLE').length,
       };
     });
   }
@@ -59,16 +67,13 @@ export class BooksService {
   async findOneBook(idOrSlug: string) {
     const book = await this.prisma.book.findFirst({
       where: {
-        OR: [
-          { bookId: idOrSlug },
-          { slug: idOrSlug }
-        ]
+        OR: [{ bookId: idOrSlug }, { slug: idOrSlug }],
       },
       include: {
         categories: true,
         authors: true,
-        copies: true
-      }
+        copies: true,
+      },
     });
     if (!book) throw new NotFoundException('Libro no encontrado');
     return book;
@@ -76,7 +81,7 @@ export class BooksService {
 
   async updateBook(bookId: string, updateBookDto: UpdateBookDto) {
     const { categoryIds, authorIds, ...bookData } = updateBookDto;
-    
+
     await this.findOneBook(bookId);
 
     const slug = bookData.title ? generateSlug(bookData.title) : undefined;
@@ -86,17 +91,21 @@ export class BooksService {
       data: {
         ...bookData,
         ...(slug ? { slug } : {}),
-        categories: categoryIds ? {
-          set: categoryIds.map(id => ({ categoryId: id }))
-        } : undefined,
-        authors: authorIds ? {
-          set: authorIds.map(id => ({ authorId: id }))
-        } : undefined,
+        categories: categoryIds
+          ? {
+              set: categoryIds.map((id) => ({ categoryId: id })),
+            }
+          : undefined,
+        authors: authorIds
+          ? {
+              set: authorIds.map((id) => ({ authorId: id })),
+            }
+          : undefined,
       },
       include: {
         categories: true,
-        authors: true
-      }
+        authors: true,
+      },
     });
   }
 
@@ -104,7 +113,7 @@ export class BooksService {
     await this.findOneBook(bookId);
     return this.prisma.book.update({
       where: { bookId },
-      data: { activeState: false }
+      data: { activeState: false },
     });
   }
 
@@ -115,28 +124,35 @@ export class BooksService {
 
     for (let i = 0; i < quantity; i++) {
       let barcode = data.barcode;
-      
+
       // If quantity > 1 or barcode is empty, generate one
       if (quantity > 1 || !barcode) {
-        barcode = `LIB-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+        barcode = `LIB-${Date.now().toString().slice(-6)}-${Math.floor(
+          Math.random() * 10000,
+        )
+          .toString()
+          .padStart(4, '0')}`;
         // Brief delay to ensure Date.now() uniqueness if needed, but the random part helps
       }
 
       const existingCopy = await this.prisma.copy.findUnique({
-        where: { barcode }
+        where: { barcode },
       });
 
       if (existingCopy) {
         // If it was manual and exists, throw error
         if (data.barcode) {
-          throw new ConflictException(`El código de barras '${data.barcode}' ya está en uso.`);
+          throw new ConflictException(
+            `El código de barras '${data.barcode}' ya está en uso.`,
+          );
         }
         // If it was auto-generated and exists (rare), retry once with different random
-        i--; continue; 
+        i--;
+        continue;
       }
 
       const copy = await this.prisma.copy.create({
-        data: { ...data, barcode }
+        data: { ...data, barcode },
       });
       createdCopies.push(copy);
     }
@@ -147,11 +163,11 @@ export class BooksService {
   async findCopiesByBook(idOrSlug: string) {
     const book = await this.findOneBook(idOrSlug);
     return this.prisma.copy.findMany({
-      where: { 
+      where: {
         bookId: book.bookId,
-        activeState: true 
+        activeState: true,
       },
-      orderBy: { barcode: 'asc' }
+      orderBy: { barcode: 'asc' },
     });
   }
 
@@ -161,16 +177,18 @@ export class BooksService {
 
     if (updateCopyDto.barcode && updateCopyDto.barcode !== copy.barcode) {
       const existingCopy = await this.prisma.copy.findUnique({
-        where: { barcode: updateCopyDto.barcode }
+        where: { barcode: updateCopyDto.barcode },
       });
       if (existingCopy) {
-        throw new ConflictException(`El código de barras '${updateCopyDto.barcode}' ya está en uso.`);
+        throw new ConflictException(
+          `El código de barras '${updateCopyDto.barcode}' ya está en uso.`,
+        );
       }
     }
 
     return this.prisma.copy.update({
       where: { copyId },
-      data: updateCopyDto
+      data: updateCopyDto,
     });
   }
 
@@ -180,7 +198,7 @@ export class BooksService {
 
     return this.prisma.copy.update({
       where: { copyId },
-      data: { activeState: false }
+      data: { activeState: false },
     });
   }
 

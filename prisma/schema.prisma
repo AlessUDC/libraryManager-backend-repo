@@ -46,6 +46,10 @@ model User {
   librarian     Librarian?
   administrator Administrator?
   loans         Loan[]
+  reservations  Reservation[]
+  fines         Fine[]
+  sanctions     Sanction[]
+  systemBlockUntil DateTime? 
 }
 
 model UserData {
@@ -149,7 +153,20 @@ enum CopyStatus {
   AVAILABLE
   LENT
   RESERVED
+  HELD
   MAINTENANCE
+}
+
+enum LoanType {
+  HOME
+  LIBRARY
+}
+
+enum ReservationStatus {
+  PENDING
+  FULFILLED
+  EXPIRED
+  CANCELLED
 }
 
 enum CopyCondition {
@@ -190,6 +207,7 @@ model Book {
   edition         String?
   language        String?
   description     String?
+  cost            Float?     @default(0)
   activeState     Boolean    @default(true)
   categories      Category[]
   authors         Author[]
@@ -208,8 +226,37 @@ model Copy {
   book        Book          @relation(fields: [bookId], references: [bookId])
   bookId      String
   loans       Loan[]
+  reservations Reservation[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+}
+
+model Reservation {
+  reservationId        String   @id @default(uuid())
+
+  userId               String
+  copyId               String
+
+  token                String   @unique
+
+  requestedLoanType    LoanType
+  requestedDueDate     DateTime
+
+  expiresAt            DateTime
+
+  redeemedAt           DateTime?
+
+  failedAttempts       Int      @default(0)
+
+  status               ReservationStatus @default(PENDING)
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User     @relation(fields: [userId], references: [userId])
+  copy                 Copy     @relation(fields: [copyId], references: [copyId])
+
+  loan                 Loan?
 }
 
 enum LoanStatus {
@@ -219,15 +266,75 @@ enum LoanStatus {
 }
 
 model Loan {
-  loanId      String     @id @default(uuid())
-  user        User       @relation(fields: [userId], references: [userId])
+  loanId               String   @id @default(uuid())
+
+  reservationId        String?  @unique
+  reservation          Reservation? @relation(fields: [reservationId], references: [reservationId])
+
+  userId               String
+  user                 User     @relation(fields: [userId], references: [userId])
+  
+  copyId               String
+  copy                 Copy     @relation(fields: [copyId], references: [copyId])
+  
+  borrowDate           DateTime @default(now())
+  dueDate              DateTime // This will be the approvedDueDate
+  returnDate           DateTime?
+  
+  type                 LoanType @default(HOME)
+  status               LoanStatus @default(ACTIVE)
+  observations         String?
+  
+  depositAmount        Float?    // Cuánto dejó de garantía (2x costo del libro)
+  depositStatus        String?   // HELD, REFUNDED, FORFEITED
+
+  fines                Fine[]
+  sanctions            Sanction[]
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Fine {
+  fineId      String   @id @default(uuid())
   userId      String
-  copy        Copy       @relation(fields: [copyId], references: [copyId])
-  copyId      String
-  borrowDate  DateTime   @default(now())
-  dueDate     DateTime
-  returnDate  DateTime?
-  status      LoanStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  loanId      String
+  amount      Float
+  description String
+  status      FineStatus @default(PENDING) // PENDING, PAID, ANNULLED
+  createdAt   DateTime @default(now())
+  paidAt      DateTime?
+
+  user        User     @relation(fields: [userId], references: [userId])
+  loan        Loan     @relation(fields: [loanId], references: [loanId])
+}
+
+model Sanction {
+  sanctionId  String   @id @default(uuid())
+  userId      String
+  loanId      String
+  type        SanctionType // LEVE, GRAVE, MUY_GRAVE
+  status      SanctionStatus @default(PENDING) // PENDING means it is waiting to accumulate for a block
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [userId])
+  loan        Loan     @relation(fields: [loanId], references: [loanId])
+}
+
+enum SanctionStatus {
+  PENDING
+  APPLIED
+  REDEEMED
+}
+
+enum FineStatus {
+  PENDING
+  PAID
+  ANNULLED
+}
+
+enum SanctionType {
+  LEVE
+  GRAVE
+  MUY_GRAVE
 }

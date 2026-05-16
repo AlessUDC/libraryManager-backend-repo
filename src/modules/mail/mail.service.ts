@@ -44,7 +44,10 @@ export class MailService {
       this.logger.log(`Correo de confirmación enviado exitosamente a ${email}`);
       return true;
     } catch (error) {
-      this.logger.error(`Error enviando correo de confirmación a ${email}`, error);
+      this.logger.error(
+        `Error enviando correo de confirmación a ${email}`,
+        error,
+      );
       return false;
     }
   }
@@ -52,7 +55,7 @@ export class MailService {
   async sendPasswordResetEmail(email: string, token: string) {
     try {
       const resetUrl = `http://localhost:5173/auth/reset-password`;
-      
+
       await this.transporter.sendMail({
         from: '"Nexus Platform" <noreply@nexus.com>',
         to: email,
@@ -78,14 +81,22 @@ export class MailService {
       this.logger.log(`Correo de recuperación enviado exitosamente a ${email}`);
       return true;
     } catch (error) {
-      this.logger.error(`Error enviando correo de recuperación a ${email}`, error);
+      this.logger.error(
+        `Error enviando correo de recuperación a ${email}`,
+        error,
+      );
       return false;
     }
   }
-  async sendActivationEmail(email: string, name: string, code: string, token: string) {
+  async sendActivationEmail(
+    email: string,
+    name: string,
+    code: string,
+    token: string,
+  ) {
     try {
       const activationUrl = `http://localhost:5173/auth/activate/${token}`;
-      
+
       await this.transporter.sendMail({
         from: '"LibManager Platform" <noreply@libmanager.com>',
         to: email,
@@ -129,7 +140,10 @@ export class MailService {
       this.logger.log(`Correo de activación enviado exitosamente a ${email}`);
       return true;
     } catch (error) {
-      this.logger.error(`Error enviando correo de activación a ${email}`, error);
+      this.logger.error(
+        `Error enviando correo de activación a ${email}`,
+        error,
+      );
       return false;
     }
   }

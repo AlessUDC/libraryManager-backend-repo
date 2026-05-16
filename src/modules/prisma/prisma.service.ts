@@ -6,9 +6,14 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor(configService: ConfigService) {
-    const pool = new Pool({ connectionString: configService.get<string>('DATABASE_URL') });
+    const pool = new Pool({
+      connectionString: configService.get<string>('DATABASE_URL'),
+    });
     const adapter = new PrismaPg(pool);
     super({ adapter });
   }
@@ -18,7 +23,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$connect();
       console.log(colors.blue.bold('Prisma conectado a PostgreSQL 🗣️ [✅✅ ]'));
     } catch (error) {
-      console.log(colors.red.bold('Error al conectar a la base de datos con Prisma 🗣️ [❌❌ ]'));
+      console.log(
+        colors.red.bold(
+          'Error al conectar a la base de datos con Prisma 🗣️ [❌❌ ]',
+        ),
+      );
       console.error(error);
       process.exit(1);
     }

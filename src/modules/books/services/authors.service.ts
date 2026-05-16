@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuthorDto, UpdateAuthorDto } from '../dto/author.dto';
 import { generateSlug } from 'src/common/utils/slug';
@@ -14,11 +18,11 @@ export class AuthorsService {
 
     while (true) {
       const existing = await this.prisma.author.findUnique({
-        where: { slug }
+        where: { slug },
       });
 
       if (!existing) return slug;
-      
+
       // If exists, append counter or random string
       slug = `${baseSlug}-${counter}`;
       counter++;
@@ -33,7 +37,7 @@ export class AuthorsService {
 
   async create(createAuthorDto: CreateAuthorDto) {
     const slug = await this.generateUniqueSlug(createAuthorDto.name);
-    
+
     try {
       return await this.prisma.author.create({
         data: {
@@ -43,7 +47,9 @@ export class AuthorsService {
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Ya existe un autor con un slug similar, por favor intenta de nuevo');
+        throw new ConflictException(
+          'Ya existe un autor con un slug similar, por favor intenta de nuevo',
+        );
       }
       throw error;
     }
@@ -58,10 +64,7 @@ export class AuthorsService {
   async findOne(idOrSlug: string) {
     const author = await this.prisma.author.findFirst({
       where: {
-        OR: [
-          { authorId: idOrSlug },
-          { slug: idOrSlug }
-        ]
+        OR: [{ authorId: idOrSlug }, { slug: idOrSlug }],
       },
     });
     if (!author) throw new NotFoundException('Autor no encontrado');
@@ -70,7 +73,7 @@ export class AuthorsService {
 
   async update(authorId: string, updateAuthorDto: UpdateAuthorDto) {
     const author = await this.findOne(authorId);
-    
+
     let slug = undefined;
     if (updateAuthorDto.name && updateAuthorDto.name !== author.name) {
       slug = await this.generateUniqueSlug(updateAuthorDto.name);
@@ -80,7 +83,7 @@ export class AuthorsService {
       where: { authorId: author.authorId },
       data: {
         ...updateAuthorDto,
-        ...(slug ? { slug } : {})
+        ...(slug ? { slug } : {}),
       },
     });
   }

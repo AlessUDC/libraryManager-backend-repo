@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsString, IsBoolean, IsOptional, IsInt, IsArray, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsInt,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateBookDto {
   @IsString({ message: 'El título debe ser una cadena de texto' })
@@ -34,7 +42,10 @@ export class CreateBookDto {
   activeState?: boolean;
 
   @IsArray({ message: 'Las categorías deben ser un arreglo de IDs' })
-  @IsUUID('all', { each: true, message: 'Cada categoría debe ser un UUID válido' })
+  @IsUUID('all', {
+    each: true,
+    message: 'Cada categoría debe ser un UUID válido',
+  })
   @IsOptional()
   categoryIds?: string[];
 
@@ -78,7 +89,10 @@ export class UpdateBookDto {
   activeState?: boolean;
 
   @IsArray({ message: 'Las categorías deben ser un arreglo de IDs' })
-  @IsUUID('all', { each: true, message: 'Cada categoría debe ser un UUID válido' })
+  @IsUUID('all', {
+    each: true,
+    message: 'Cada categoría debe ser un UUID válido',
+  })
   @IsOptional()
   categoryIds?: string[];
 

@@ -38,7 +38,9 @@ export class UsersCron {
         return;
       }
 
-      this.logger.log(`Se encontraron ${usersToDelete.length} cuentas para eliminar.`);
+      this.logger.log(
+        `Se encontraron ${usersToDelete.length} cuentas para eliminar.`,
+      );
 
       for (const user of usersToDelete) {
         await this.prisma.$transaction(async (tx) => {
@@ -54,15 +56,19 @@ export class UsersCron {
 
           // 4. Eliminar datos personales (UserData)
           if (user.userDataId) {
-            await tx.userData.delete({ where: { userDataId: user.userDataId } });
+            await tx.userData.delete({
+              where: { userDataId: user.userDataId },
+            });
           }
 
           // 5. Eliminar la dirección si existe
           if (user.userData?.addressId) {
-            await tx.address.delete({ where: { addressId: user.userData.addressId } });
+            await tx.address.delete({
+              where: { addressId: user.userData.addressId },
+            });
           }
         });
-        
+
         this.logger.log(`Cuenta eliminada silenciosamente: ${user.code}`);
       }
 

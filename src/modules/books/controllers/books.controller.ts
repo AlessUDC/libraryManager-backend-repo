@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { BooksService } from '../services/books.service';
 import { CreateBookDto, UpdateBookDto } from '../dto/book.dto';
 import { CreateCopyDto, UpdateCopyDto } from '../dto/copy.dto';
@@ -10,7 +19,7 @@ export class BooksController {
   @Get('autocomplete')
   autocomplete(
     @Query('text') text: string,
-    @Query('type') type: 'title' | 'author' | 'category'
+    @Query('type') type: 'title' | 'author' | 'category',
   ) {
     return this.booksService.autocomplete(text, type);
   }
@@ -52,7 +61,10 @@ export class BooksController {
   }
 
   @Patch('copies/:copyId')
-  updateCopy(@Param('copyId') copyId: string, @Body() updateCopyDto: UpdateCopyDto) {
+  updateCopy(
+    @Param('copyId') copyId: string,
+    @Body() updateCopyDto: UpdateCopyDto,
+  ) {
     return this.booksService.updateCopy(copyId, updateCopyDto);
   }
 

@@ -13,45 +13,47 @@ export class StatsService {
       totalCopies,
       availableCopies,
       categoriesCount,
-      booksByCategory
+      booksByCategory,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.userData.count({ where: { activeState: true } }),
       this.prisma.book.count({ where: { activeState: true } }),
       this.prisma.copy.count({ where: { activeState: true } }),
-      this.prisma.copy.count({ where: { activeState: true, status: 'AVAILABLE' } }),
+      this.prisma.copy.count({
+        where: { activeState: true, status: 'AVAILABLE' },
+      }),
       this.prisma.category.count({ where: { activeState: true } }),
       this.prisma.category.findMany({
         where: { activeState: true },
         select: {
           title: true,
           _count: {
-            select: { books: true }
-          }
+            select: { books: true },
+          },
         },
         take: 5,
         orderBy: {
-          books: { _count: 'desc' }
-        }
-      })
+          books: { _count: 'desc' },
+        },
+      }),
     ]);
 
     return {
       users: {
         total: totalUsers,
         active: activeUsers,
-        inactive: totalUsers - activeUsers
+        inactive: totalUsers - activeUsers,
       },
       library: {
         totalTitles: totalBooks,
         totalCopies: totalCopies,
         availableCopies: availableCopies,
-        categories: categoriesCount
+        categories: categoriesCount,
       },
-      distribution: booksByCategory.map(cat => ({
+      distribution: booksByCategory.map((cat) => ({
         name: cat.title,
-        value: cat._count.books
-      }))
+        value: cat._count.books,
+      })),
     };
   }
 }

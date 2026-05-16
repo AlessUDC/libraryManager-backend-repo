@@ -1,4 +1,23 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength, IsDateString, ValidateIf, Min, IsIn, Length, IsInt, Max, Matches, Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  IsDateString,
+  ValidateIf,
+  Min,
+  IsIn,
+  Length,
+  IsInt,
+  Max,
+  Matches,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+} from 'class-validator';
 import { Role } from '@prisma/client';
 
 @ValidatorConstraint({ name: 'isDocumentNumberValid', async: false })
@@ -41,14 +60,12 @@ export class IsMinBirthDateConstraint implements ValidatorConstraintInterface {
   }
 }
 
-
 export class CreateAccountDto {
   @IsString({ message: 'El código debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El código es obligatorio' })
   @Length(10, 10, { message: 'El código debe tener exactamente 10 dígitos' })
   @Matches(/^[0-9]+$/, { message: 'El código solo debe contener números' })
   code: string;
-
 
   @IsEnum(Role, { message: 'Rol no válido' })
   @IsOptional()
@@ -79,7 +96,9 @@ export class CreateAccountDto {
 
   @IsNotEmpty({ message: 'El estado civil es obligatorio' })
   @IsString({ message: 'El estado civil debe ser una cadena de texto' })
-  @IsIn(['S', 'C', 'V', 'D'], { message: 'El estado civil debe ser S, C, V o D' })
+  @IsIn(['S', 'C', 'V', 'D'], {
+    message: 'El estado civil debe ser S, C, V o D',
+  })
   maritalStatus: string;
 
   @IsNotEmpty({ message: 'El género es obligatorio' })
@@ -87,19 +106,26 @@ export class CreateAccountDto {
   @IsIn(['F', 'M', 'O'], { message: 'El género debe ser F, M o O' })
   gender: string;
 
-  @IsDateString({}, { message: 'La fecha de nacimiento debe tener un formato válido' })
+  @IsDateString(
+    {},
+    { message: 'La fecha de nacimiento debe tener un formato válido' },
+  )
   @IsNotEmpty({ message: 'La fecha de nacimiento es obligatoria' })
   @Validate(IsMinBirthDateConstraint)
   birthdate: string;
 
   @IsNotEmpty({ message: 'El teléfono móvil es obligatorio' })
   @IsString({ message: 'El teléfono móvil debe ser una cadena de texto' })
-  @Matches(/^\d{9}$/, { message: 'El teléfono móvil debe tener exactamente 9 dígitos' })
+  @Matches(/^\d{9}$/, {
+    message: 'El teléfono móvil debe tener exactamente 9 dígitos',
+  })
   mobilePhone: string;
 
   @IsNotEmpty({ message: 'El teléfono fijo es obligatorio' })
   @IsString({ message: 'El teléfono fijo debe ser una cadena de texto' })
-  @Matches(/^\d{9}$/, { message: 'El teléfono fijo debe tener exactamente 9 dígitos' })
+  @Matches(/^\d{9}$/, {
+    message: 'El teléfono fijo debe tener exactamente 9 dígitos',
+  })
   landlinePhone: string;
 
   @IsEmail({}, { message: 'El formato del email no es válido' })
@@ -120,21 +146,20 @@ export class CreateAccountDto {
   address: string;
 
   // Si es estudiante o profesor, se podrían necesitar schoolId o facultyId
-  @ValidateIf(o => o.role === Role.STUDENT)
+  @ValidateIf((o) => o.role === Role.STUDENT)
   @IsNotEmpty({ message: 'La escuela es obligatoria' })
   @IsString({ message: 'La escuela debe ser una cadena de texto' })
   schoolId?: string;
 
-  @ValidateIf(o => o.role === Role.TEACHER || o.role === Role.STUDENT)
+  @ValidateIf((o) => o.role === Role.TEACHER || o.role === Role.STUDENT)
   @IsNotEmpty({ message: 'La facultad es obligatoria' })
   @IsString({ message: 'La facultad debe ser una cadena de texto' })
   facultyId?: string;
 
-  @ValidateIf(o => o.role === Role.STUDENT)
+  @ValidateIf((o) => o.role === Role.STUDENT)
   @IsNotEmpty({ message: 'El ciclo es obligatorio para estudiantes' })
   @IsInt({ message: 'El ciclo debe ser un número entero' })
   @Min(1, { message: 'El ciclo mínimo es 1' })
   @Max(10, { message: 'El ciclo máximo es 10' })
   cycle?: number;
 }
-

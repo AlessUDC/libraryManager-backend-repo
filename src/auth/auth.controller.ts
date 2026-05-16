@@ -1,4 +1,13 @@
-import { Body, Controller, Post, Get, Patch, Delete, UseGuards, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { ConfirmAccountDto } from './dto/confirm-account.dto';
@@ -29,13 +38,19 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Patch('profile')
-  async updateProfile(@Request() req: RequestWithUser, @Body() updateProfileDto: UpdateProfileDto) {
+  async updateProfile(
+    @Request() req: RequestWithUser,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
     return this.authService.updateUserProfile(req.user.sub, updateProfileDto);
   }
 
   @UseGuards(AuthGuard)
   @Delete('profile')
-  async deleteProfile(@Request() req: RequestWithUser, @Body() deleteAccountDto: DeleteAccountDto) {
+  async deleteProfile(
+    @Request() req: RequestWithUser,
+    @Body() deleteAccountDto: DeleteAccountDto,
+  ) {
     return this.authService.deleteAccount(req.user.sub, deleteAccountDto);
   }
 
