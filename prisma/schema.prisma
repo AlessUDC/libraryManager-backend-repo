@@ -50,6 +50,9 @@ model User {
   fines         Fine[]
   sanctions     Sanction[]
   systemBlockUntil DateTime? 
+  loanBlockUntil DateTime?
+  appeals         Appeal[] @relation("UserAppeals")
+  resolvedAppeals Appeal[] @relation("ResolverAppeals")
 }
 
 model UserData {
@@ -117,10 +120,11 @@ model School {
 }
 
 model Student {
-  userId                String @id
-  user                  User   @relation(fields: [userId], references: [userId])
-  cycle                 Int
-  onTimeDeliveriesCount Int    @default(0)
+  userId                  String @id
+  user                    User   @relation(fields: [userId], references: [userId])
+  cycle                   Int
+  onTimeDeliveriesCount   Int    @default(0)
+  missedReservationsCount Int    @default(0)
 
   // Relación con School
   school                School @relation(fields: [schoolId], references: [schoolId])
@@ -307,6 +311,7 @@ model Fine {
 
   user        User     @relation(fields: [userId], references: [userId])
   loan        Loan     @relation(fields: [loanId], references: [loanId])
+  appeals     Appeal[]
 }
 
 model Sanction {
@@ -319,6 +324,7 @@ model Sanction {
 
   user        User     @relation(fields: [userId], references: [userId])
   loan        Loan     @relation(fields: [loanId], references: [loanId])
+  appeals     Appeal[]
 }
 
 enum SanctionStatus {
@@ -337,4 +343,37 @@ enum SanctionType {
   LEVE
   GRAVE
   MUY_GRAVE
+}
+
+enum AppealStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Appeal {
+  appealId    String       @id @default(uuid())
+  userId      String
+  user        User         @relation("UserAppeals", fields: [userId], references: [userId])
+  fineId      String?
+  fine        Fine?        @relation(fields: [fineId], references: [fineId])
+  sanctionId  String?
+  sanction    Sanction?    @relation(fields: [sanctionId], references: [sanctionId])
+  reason      String       
+  status      AppealStatus @default(PENDING)
+  resolverId  String?      
+  resolver    User?        @relation("ResolverAppeals", fields: [resolverId], references: [userId])
+  resolution  String?      
+  createdAt   DateTime     @default(now())
+  resolvedAt  DateTime?
+}
+
+model AuditLog {
+  auditLogId  String   @id @default(uuid())
+  action      String   
+  entity      String   
+  entityId    String?  
+  performedBy String   
+  details     String?  
+  createdAt   DateTime @default(now())
 }

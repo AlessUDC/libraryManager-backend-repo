@@ -4,13 +4,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  CreateLoanDto,
-  ReturnLoanDto,
-} from '../dto/loan.dto';
+import { CreateLoanDto, ReturnLoanDto } from '../dto/loan.dto';
 import { CopyCondition, LoanType, Prisma } from '@prisma/client';
 import { SanctionsService } from './sanctions.service';
 import { FinesService } from './fines.service';
+import { AuditLogService } from '../../audit-log/audit-log.service';
 
 @Injectable()
 export class LoansService {
@@ -18,6 +16,7 @@ export class LoansService {
     private prisma: PrismaService,
     private sanctionsService: SanctionsService,
     private finesService: FinesService,
+    private auditLogService: AuditLogService,
   ) {}
 
   async createLoan(createLoanDto: CreateLoanDto) {
@@ -60,6 +59,14 @@ export class LoansService {
         where: { copyId },
         data: { status: 'LENT' },
       });
+
+      await this.auditLogService.log(
+        'CREATE_LOAN',
+        'Loan',
+        loan.loanId,
+        userId,
+        { copyId, dueDate },
+      );
 
       return loan;
     });
@@ -107,10 +114,6 @@ export class LoansService {
 
       if (!isLate && loan.type === LoanType.HOME && loan.depositAmount) {
         loanData.depositStatus = 'REFUNDED';
-      } else if (isLate && loan.type === LoanType.HOME && loan.depositAmount) {
-        // Business Rule: If lost, forfeit. If just late, keep HELD until fines are paid?
-        // Flujo says: "Si el estudiante no perdió el libro y lo devuelve: Paga la suma de multas, recupera el monto reembolsable."
-        // We'll keep it HELD for now.
       }
 
       const updatedLoan = await tx.loan.update({
@@ -139,23 +142,55 @@ export class LoansService {
           where: { loanId, description: { contains: 'Día 1' } },
         });
         if (day1Fine) {
-          await tx.fine.update({
-            where: { fineId: day1Fine.fineId },
-            data: { status: 'ANNULLED' },
-          });
+          // Annul the fine through FinesService to log audit and handle refund automatically if needed
+          await this.finesService.annulFine(day1Fine.fineId, 'SYSTEM');
         }
       }
 
-      // 4. Reactivate User if blocked preventively (Day 1 block)
+      // 4. Reactivate User if blocked preventively (Day 1 block) on loanBlockUntil
+      const userWithBlock = await tx.user.findUnique({
+        where: { userId: loan.userId },
+      });
+
       if (
-        loan.user.systemBlockUntil &&
-        loan.user.systemBlockUntil.getFullYear() === 2099
+        userWithBlock?.loanBlockUntil &&
+        userWithBlock.loanBlockUntil.getFullYear() === 2099
       ) {
-        await tx.user.update({
-          where: { userId: loan.userId },
-          data: { systemBlockUntil: null }, // We clear it, but real sanctions might apply later if processed
+        // Verify if they have other active overdue loans
+        const remainingOverdueLoansCount = await tx.loan.count({
+          where: {
+            userId: loan.userId,
+            status: 'OVERDUE',
+            loanId: { not: loanId },
+          },
         });
+
+        if (remainingOverdueLoansCount === 0) {
+          await tx.user.update({
+            where: { userId: loan.userId },
+            data: { loanBlockUntil: null },
+          });
+
+          await this.auditLogService.log(
+            'CLEAR_PREVENTIVE_BLOCK',
+            'User',
+            loan.userId,
+            'SYSTEM',
+            { reason: 'Todos los libros vencidos han sido devueltos.' },
+          );
+        }
       }
+
+      await this.auditLogService.log(
+        'RETURN_LOAN',
+        'Loan',
+        loanId,
+        loan.userId,
+        {
+          condition: returnDto?.condition,
+          observations: returnDto?.observations,
+        },
+      );
 
       return updatedLoan;
     });
