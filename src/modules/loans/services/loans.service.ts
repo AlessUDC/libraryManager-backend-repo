@@ -103,6 +103,11 @@ export class LoansService {
 
     const now = new Date();
     const isLate = now > loan.dueDate;
+    
+    // Periodo de gracia de 24h para el Día 1
+    const msIn24h = 24 * 60 * 60 * 1000;
+    const isWithin24hGrace = isLate && (now.getTime() - loan.dueDate.getTime() <= msIn24h);
+    const isEffectivelyOnTimeOrGrace = !isLate || isWithin24hGrace;
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Update Loan
@@ -112,8 +117,12 @@ export class LoansService {
         observations: returnDto?.observations || null,
       };
 
-      if (!isLate && loan.type === LoanType.HOME && loan.depositAmount) {
-        loanData.depositStatus = 'REFUNDED';
+      if (loan.type === LoanType.HOME && loan.depositAmount) {
+        if (returnDto?.condition === CopyCondition.LOST) {
+          loanData.depositStatus = 'FORFEITED';
+        } else {
+          loanData.depositStatus = 'REFUNDED';
+        }
       }
 
       const updatedLoan = await tx.loan.update({
@@ -135,8 +144,11 @@ export class LoansService {
 
       // 3. Sanctions & Streaks Logic
       if (!isLate) {
+        // Solo las devoluciones estrictamente a tiempo cuentan para la racha de reducción de sanciones
         await this.sanctionsService.registerOnTimeDelivery(loan.userId);
+      }
 
+      if (isEffectivelyOnTimeOrGrace) {
         // If they had a Day 1 temporary fine, annul it
         const day1Fine = await tx.fine.findFirst({
           where: { loanId, description: { contains: 'Día 1' } },

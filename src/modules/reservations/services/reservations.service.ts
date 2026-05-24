@@ -14,6 +14,7 @@ import { Prisma, ReservationStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SanctionsService } from '../../loans/services/sanctions.service';
 import { AuditLogService } from '../../audit-log/audit-log.service';
+import { canReserveLibraryLoan } from '../../../common/business-calendar';
 
 const SYSTEM_ACTOR = 'SYSTEM';
 
@@ -182,6 +183,11 @@ export class ReservationsService {
     let normalizedDueDate: Date;
 
     if (requestedLoanType === 'LIBRARY') {
+      if (!canReserveLibraryLoan(now)) {
+        throw new BadRequestException(
+          'Los préstamos en sala solo pueden reservarse antes de las 7:00 PM.',
+        );
+      }
       normalizedDueDate = new Date();
       normalizedDueDate.setHours(19, 0, 0, 0);
     } else {
