@@ -52,11 +52,13 @@ export class SanctionsService {
     }
 
     if (totalDaysToBlock > 0) {
-      // Apply block to user
+      // Apply block to user's loanBlockUntil instead of systemBlockUntil
       const user = await this.prisma.user.findUnique({ where: { userId } });
       const currentBlock =
-        user?.systemBlockUntil && user.systemBlockUntil > new Date()
-          ? user.systemBlockUntil
+        user?.loanBlockUntil &&
+        user.loanBlockUntil > new Date() &&
+        user.loanBlockUntil.getFullYear() !== 2099
+          ? user.loanBlockUntil
           : new Date();
 
       const newBlockUntil = new Date(currentBlock);
@@ -65,7 +67,7 @@ export class SanctionsService {
       await this.prisma.$transaction([
         this.prisma.user.update({
           where: { userId },
-          data: { systemBlockUntil: newBlockUntil },
+          data: { loanBlockUntil: newBlockUntil },
         }),
         this.prisma.sanction.updateMany({
           where: { sanctionId: { in: sanctionsToApply } },
@@ -118,8 +120,18 @@ export class SanctionsService {
   async isUserBlocked(userId: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
       where: { userId },
-      select: { systemBlockUntil: true },
+      select: { loanBlockUntil: true, systemBlockUntil: true },
     });
-    return !!(user?.systemBlockUntil && user.systemBlockUntil > new Date());
+    const now = new Date();
+    const hasLoanBlock = !!(user?.loanBlockUntil && user.loanBlockUntil > now);
+    const hasSystemBlock = !!(
+      user?.systemBlockUntil && user.systemBlockUntil > now
+    );
+
+    const hasOverdueLoans = await this.prisma.loan.count({
+      where: { userId, status: 'OVERDUE' },
+    });
+
+    return hasLoanBlock || hasSystemBlock || hasOverdueLoans > 0;
   }
 }

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuthorDto, UpdateAuthorDto } from '../dto/author.dto';
-import { generateSlug } from 'src/common/utils/slug';
+import { generateSlug } from '../../../common/utils/slug';
 
 @Injectable()
 export class AuthorsService {

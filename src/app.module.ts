@@ -10,6 +10,8 @@ import { BooksModule } from './modules/books/books.module';
 import { LoansModule } from './modules/loans/loans.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
+import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { AppealsModule } from './modules/appeals/appeals.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
     LoansModule,
     StatsModule,
     ReservationsModule,
+    AuditLogModule,
+    AppealsModule,
   ],
   controllers: [],
   providers: [],

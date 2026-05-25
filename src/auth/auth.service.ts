@@ -207,7 +207,12 @@ export class AuthService {
     return {
       message: 'Inicio de sesión exitoso',
       token,
-      user: { id: user.userId, role: user.role, name: user.userData.name },
+      user: {
+        id: user.userId,
+        userId: user.userId,
+        role: user.role,
+        name: user.userData.name,
+      },
     };
   }
 

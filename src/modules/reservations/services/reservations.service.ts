@@ -13,34 +13,142 @@ import {
 import { Prisma, ReservationStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SanctionsService } from '../../loans/services/sanctions.service';
+import { AuditLogService } from '../../audit-log/audit-log.service';
+import { canReserveLibraryLoan } from '../../../common/business-calendar';
+
+const SYSTEM_ACTOR = 'SYSTEM';
 
 @Injectable()
 export class ReservationsService {
   constructor(
     private prisma: PrismaService,
     private sanctionsService: SanctionsService,
+    private auditLogService: AuditLogService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
+    await this.expireOldReservations();
+  }
+
+  private async expireOldReservations(): Promise<void> {
     const expiredReservations = await this.prisma.reservation.findMany({
       where: {
-        status: 'PENDING',
+        status: ReservationStatus.PENDING,
         expiresAt: { lt: new Date() },
       },
     });
 
     for (const res of expiredReservations) {
       await this.prisma.$transaction(async (tx) => {
-        await this.expireReservation(tx, res.reservationId);
+        await this.processExpiredReservation(tx, res.reservationId);
       });
     }
+  }
+
+  private getBlockDaysForMissedCount(count: number): number | null {
+    if (count >= 7) return 7;
+    if (count === 5) return 3;
+    if (count === 3) return 1;
+    return null;
+  }
+
+  private async processExpiredReservation(
+    tx: Prisma.TransactionClient,
+    reservationId: string,
+  ) {
+    const reservation = await tx.reservation.findUnique({
+      where: { reservationId },
+    });
+
+    if (!reservation || reservation.status !== ReservationStatus.PENDING) {
+      return;
+    }
+
+    if (new Date() <= reservation.expiresAt) {
+      return;
+    }
+
+    await tx.reservation.update({
+      where: { reservationId },
+      data: { status: ReservationStatus.EXPIRED },
+    });
+
+    await tx.copy.update({
+      where: { copyId: reservation.copyId },
+      data: { status: 'AVAILABLE' },
+    });
+
+    await this.auditLogService.log(
+      'EXPIRE_RESERVATION',
+      'Reservation',
+      reservationId,
+      SYSTEM_ACTOR,
+      { userId: reservation.userId, copyId: reservation.copyId },
+    );
+
+    const user = await tx.user.findUnique({
+      where: { userId: reservation.userId },
+      include: { student: true },
+    });
+
+    if (user?.role !== 'STUDENT' || !user.student) {
+      return;
+    }
+
+    const updatedStudent = await tx.student.update({
+      where: { userId: reservation.userId },
+      data: { missedReservationsCount: { increment: 1 } },
+    });
+
+    const blockDays = this.getBlockDaysForMissedCount(
+      updatedStudent.missedReservationsCount,
+    );
+
+    if (!blockDays) {
+      return;
+    }
+
+    const blockUser = await tx.user.findUnique({
+      where: { userId: reservation.userId },
+    });
+
+    const now = new Date();
+    const currentBlock =
+      blockUser?.loanBlockUntil &&
+      blockUser.loanBlockUntil > now &&
+      blockUser.loanBlockUntil.getFullYear() !== 2099
+        ? blockUser.loanBlockUntil
+        : now;
+
+    const newBlockUntil = new Date(currentBlock);
+    newBlockUntil.setDate(newBlockUntil.getDate() + blockDays);
+
+    await tx.user.update({
+      where: { userId: reservation.userId },
+      data: { loanBlockUntil: newBlockUntil },
+    });
+
+    await this.auditLogService.log(
+      'USER_BLOCK_AUTOMATIC',
+      'User',
+      reservation.userId,
+      SYSTEM_ACTOR,
+      {
+        reason: 'MISSED_RESERVATIONS',
+        missedReservationsCount: updatedStudent.missedReservationsCount,
+        blockDays,
+        loanBlockUntil: newBlockUntil,
+      },
+    );
   }
 
   async createReservation(
     userId: string,
     createReservationDto: CreateReservationDto,
   ) {
+    await this.expireOldReservations();
+
     const {
       copyId,
       requestedLoanType,
@@ -48,7 +156,6 @@ export class ReservationsService {
       reservationDurationMinutes,
     } = createReservationDto;
 
-    // Validate user role and duration
     const user = await this.prisma.user.findUnique({ where: { userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
@@ -66,37 +173,44 @@ export class ReservationsService {
       );
     }
 
-    // Validate requestedDueDate
     const maxDays = 5;
     const now = new Date();
-    const dueDate = new Date(requestedDueDate);
 
-    // Check if date is in the past
-    if (dueDate < now && dueDate.toDateString() !== now.toDateString()) {
-      throw new BadRequestException(
-        'La fecha de devolución no puede ser en el pasado',
-      );
-    }
+    const startOfDay = (d: Date) =>
+      new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const calendarDay = (d: Date) => startOfDay(d).getTime();
+
+    let normalizedDueDate: Date;
 
     if (requestedLoanType === 'LIBRARY') {
-      if (dueDate.toDateString() !== now.toDateString()) {
+      if (!canReserveLibraryLoan(now)) {
         throw new BadRequestException(
-          'Los préstamos en sala deben devolverse el mismo día',
+          'Los préstamos en sala solo pueden reservarse antes de las 7:00 PM.',
         );
       }
+      normalizedDueDate = new Date();
+      normalizedDueDate.setHours(19, 0, 0, 0);
     } else {
-      const maxDueDate = new Date();
-      maxDueDate.setDate(maxDueDate.getDate() + maxDays);
-      maxDueDate.setHours(23, 59, 59, 999);
+      const dueDate = new Date(requestedDueDate);
 
-      if (dueDate > maxDueDate) {
+      if (calendarDay(dueDate) < calendarDay(now)) {
+        throw new BadRequestException(
+          'La fecha de devolución no puede ser en el pasado',
+        );
+      }
+
+      const maxDueDate = new Date(now);
+      maxDueDate.setDate(maxDueDate.getDate() + maxDays);
+
+      if (calendarDay(dueDate) > calendarDay(maxDueDate)) {
         throw new BadRequestException(
           `El tiempo máximo de préstamo para su rol es de ${maxDays} días`,
         );
       }
+
+      normalizedDueDate = dueDate;
     }
 
-    // Transaction with SERIALIZABLE isolation to prevent concurrent reservations of the same copy
     return this.prisma.$transaction(
       async (tx) => {
         const copy = await tx.copy.findUnique({ where: { copyId } });
@@ -107,7 +221,6 @@ export class ReservationsService {
           );
         }
 
-        // Generate 6-digit token
         const token = Math.floor(100000 + Math.random() * 900000).toString();
 
         const expiresAt = new Date();
@@ -121,7 +234,7 @@ export class ReservationsService {
             copyId,
             token,
             requestedLoanType,
-            requestedDueDate: new Date(requestedDueDate),
+            requestedDueDate: normalizedDueDate,
             expiresAt,
             status: 'PENDING',
           },
@@ -141,6 +254,8 @@ export class ReservationsService {
   }
 
   async getAdminReservations() {
+    await this.expireOldReservations();
+
     return this.prisma.reservation.findMany({
       where: { status: 'PENDING' },
       include: {
@@ -152,8 +267,10 @@ export class ReservationsService {
   }
 
   async getUserReservations(userId: string) {
+    await this.expireOldReservations();
+
     return this.prisma.reservation.findMany({
-      where: { userId, status: 'PENDING' },
+      where: { userId },
       include: {
         copy: { include: { book: true } },
       },
@@ -166,6 +283,8 @@ export class ReservationsService {
     userId: string,
     redeemDto: RedeemReservationDto,
   ) {
+    await this.expireOldReservations();
+
     const { token } = redeemDto;
 
     return this.prisma.$transaction(
@@ -184,7 +303,7 @@ export class ReservationsService {
           throw new BadRequestException('La reserva no está pendiente');
 
         if (new Date() > reservation.expiresAt) {
-          await this.expireReservation(tx, reservationId);
+          await this.processExpiredReservation(tx, reservationId);
           throw new BadRequestException('La reserva ha expirado');
         }
 
@@ -211,7 +330,6 @@ export class ReservationsService {
           throw new BadRequestException('Token inválido');
         }
 
-        // Success: Create Loan
         let depositAmount = null;
         if (reservation.requestedLoanType === 'HOME') {
           const copyWithBook = await tx.copy.findUnique({
@@ -252,20 +370,6 @@ export class ReservationsService {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       },
     );
-  }
-
-  private async expireReservation(
-    tx: Prisma.TransactionClient,
-    reservationId: string,
-  ) {
-    const reservation = await tx.reservation.update({
-      where: { reservationId },
-      data: { status: 'EXPIRED' },
-    });
-    await tx.copy.update({
-      where: { copyId: reservation.copyId },
-      data: { status: 'AVAILABLE' },
-    });
   }
 
   async cancelReservation(reservationId: string, userId: string) {

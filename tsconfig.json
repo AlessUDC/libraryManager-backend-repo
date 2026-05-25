@@ -14,7 +14,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "incremental": true,
-    "skipLibCheck": true,
+    "baseUrl": "./src",
+    "paths": {
+      "common/*": ["common/*"]
+    },
+
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
