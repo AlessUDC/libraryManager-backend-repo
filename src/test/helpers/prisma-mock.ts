@@ -1,6 +1,8 @@
+import { PrismaClient } from "@prisma/client";
+
 /** Crea un mock parcial de PrismaClient con métodos jest.fn() */
 export function createPrismaMock() {
-  const mock: Record<string, unknown> = {
+  const mock = {
     $transaction: jest.fn(),
     user: {
       findUnique: jest.fn(),
@@ -44,7 +46,7 @@ export function createPrismaMock() {
     auditLog: {
       create: jest.fn(),
     },
-  };
+  } as unknown as jest.Mocked<PrismaClient>;
 
   mock.$transaction.mockImplementation(
     async (arg: unknown) => {
