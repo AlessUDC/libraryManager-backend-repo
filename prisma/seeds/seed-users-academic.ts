@@ -36,6 +36,7 @@ async function main() {
           code,
           password: hashedPassword,
           role: Role.STUDENT,
+          isConfirmed: true,
           userData: {
             create: {
               name: `Estudiante ${i}`,
@@ -70,6 +71,7 @@ async function main() {
         code: teacherCode,
         password: hashedPassword,
         role: Role.TEACHER,
+        isConfirmed: true,
         userData: {
           create: {
             name: 'Profesor X',

@@ -31,6 +31,7 @@ async function main() {
         code: adminCode,
         password: hashedPassword,
         role: Role.ADMINISTRATOR,
+        isConfirmed: true,
         userData: {
           create: {
             name: 'Administrador',
@@ -63,6 +64,7 @@ async function main() {
         code: librarianCode,
         password: hashedPassword,
         role: Role.LIBRARIAN,
+        isConfirmed: true,
         userData: {
           create: {
             name: 'Bibliotecario',

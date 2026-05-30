@@ -166,6 +166,53 @@ export class ReservationsService {
       );
     }
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const reservationsTodayCount = await this.prisma.reservation.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: startOfToday,
+          lte: endOfToday,
+        },
+      },
+    });
+
+    const activeLoansCount = await this.prisma.loan.count({
+      where: {
+        userId,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (user.role === 'STUDENT') {
+      if (reservationsTodayCount >= 2) {
+        throw new BadRequestException(
+          'DAILY_LIMIT_EXCEEDED: Has alcanzado el límite diario de reservas (2 para estudiantes).',
+        );
+      }
+      if (activeLoansCount >= 3) {
+        throw new BadRequestException(
+          'LOAN_LIMIT_EXCEEDED: Has alcanzado el límite de préstamos activos (3 para estudiantes).',
+        );
+      }
+    } else if (user.role === 'TEACHER') {
+      if (reservationsTodayCount >= 5) {
+        throw new BadRequestException(
+          'DAILY_LIMIT_EXCEEDED: Has alcanzado el límite diario de reservas (5 para profesores).',
+        );
+      }
+      if (activeLoansCount >= 6) {
+        throw new BadRequestException(
+          'LOAN_LIMIT_EXCEEDED: Has alcanzado el límite de préstamos activos (6 para profesores).',
+        );
+      }
+    }
+
     const maxMinutes = user.role === 'TEACHER' ? 120 : 60;
     if (reservationDurationMinutes > maxMinutes) {
       throw new BadRequestException(
@@ -372,13 +419,15 @@ export class ReservationsService {
     );
   }
 
-  async cancelReservation(reservationId: string, userId: string) {
+  async cancelReservation(reservationId: string, userId: string, userRole?: string) {
     return this.prisma.$transaction(async (tx) => {
       const reservation = await tx.reservation.findUnique({
         where: { reservationId },
       });
       if (!reservation) throw new NotFoundException('Reserva no encontrada');
-      if (reservation.userId !== userId)
+
+      const isStaff = userRole === 'ADMINISTRATOR' || userRole === 'LIBRARIAN';
+      if (reservation.userId !== userId && !isStaff)
         throw new ForbiddenException(
           'No tiene permiso para cancelar esta reserva',
         );

@@ -9,6 +9,7 @@ import { CopyCondition, LoanType, Prisma } from '@prisma/client';
 import { SanctionsService } from './sanctions.service';
 import { FinesService } from './fines.service';
 import { AuditLogService } from '../../audit-log/audit-log.service';
+import { countOverduePenaltyDays } from '../../../common/business-calendar';
 
 @Injectable()
 export class LoansService {
@@ -37,7 +38,7 @@ export class LoansService {
       );
     }
 
-    let depositAmount = null;
+    let depositAmount: number | null = null;
     if (copy.book?.cost) {
       depositAmount = copy.book.cost * 2;
     }
@@ -90,6 +91,28 @@ export class LoansService {
     });
   }
 
+  async getActiveLoanByBarcode(barcode: string) {
+    const copy = await this.prisma.copy.findUnique({
+      where: { barcode },
+      include: { book: true },
+    });
+    if (!copy) throw new NotFoundException('Ejemplar no encontrado');
+
+    const loan = await this.prisma.loan.findFirst({
+      where: {
+        copyId: copy.copyId,
+        status: { in: ['ACTIVE', 'OVERDUE'] },
+      },
+      include: {
+        user: { include: { userData: true } },
+        copy: { include: { book: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!loan) throw new NotFoundException('No hay un préstamo activo para este ejemplar');
+    return loan;
+  }
+
   async returnLoan(loanId: string, returnDto?: ReturnLoanDto) {
     const loan = await this.prisma.loan.findUnique({
       where: { loanId },
@@ -104,9 +127,9 @@ export class LoansService {
     const now = new Date();
     const isLate = now > loan.dueDate;
     
-    // Periodo de gracia de 24h para el Día 1
-    const msIn24h = 24 * 60 * 60 * 1000;
-    const isWithin24hGrace = isLate && (now.getTime() - loan.dueDate.getTime() <= msIn24h);
+    // Periodo de gracia de 24h para el Día 1 (respetando modo simulación en tests)
+    const diffDays = countOverduePenaltyDays(loan.dueDate, now);
+    const isWithin24hGrace = isLate && diffDays <= 1;
     const isEffectivelyOnTimeOrGrace = !isLate || isWithin24hGrace;
 
     return this.prisma.$transaction(async (tx) => {
@@ -120,7 +143,7 @@ export class LoansService {
       if (loan.type === LoanType.HOME && loan.depositAmount) {
         if (returnDto?.condition === CopyCondition.LOST) {
           loanData.depositStatus = 'FORFEITED';
-        } else {
+        } else if (isEffectivelyOnTimeOrGrace) {
           loanData.depositStatus = 'REFUNDED';
         }
       }

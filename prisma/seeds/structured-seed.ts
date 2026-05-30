@@ -36,6 +36,7 @@ async function main() {
   console.log('Starting structured seeding...');
 
   const hashedPassword = await bcrypt.hash('password123', 10);
+  const adminHashedPassword = await bcrypt.hash('admin123', 10);
 
   // 1. Base Locations
   console.log('Seeding locations...');
@@ -81,8 +82,9 @@ async function main() {
     data: {
       code: 'ADMIN01',
       slug: generateSlug(adminName),
-      password: hashedPassword,
+      password: adminHashedPassword,
       role: Role.ADMINISTRATOR,
+      isConfirmed: true,
       userData: {
         create: {
           name: 'Admin',
@@ -106,6 +108,7 @@ async function main() {
       slug: generateSlug(libName),
       password: hashedPassword,
       role: Role.LIBRARIAN,
+      isConfirmed: true,
       userData: {
         create: {
           name: 'Librarian',
@@ -129,6 +132,7 @@ async function main() {
       slug: generateSlug(teacherName),
       password: hashedPassword,
       role: Role.TEACHER,
+      isConfirmed: true,
       userData: {
         create: {
           name: 'Profesor',
@@ -153,6 +157,7 @@ async function main() {
         slug: generateSlug(name),
         password: hashedPassword,
         role: Role.STUDENT,
+        isConfirmed: true,
         userData: {
           create: {
             name: `Alumno ${i}`,

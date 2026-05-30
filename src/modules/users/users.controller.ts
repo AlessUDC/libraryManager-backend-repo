@@ -8,7 +8,9 @@ import {
   Body,
   UseGuards,
   Query,
+  Request,
 } from '@nestjs/common';
+import type { RequestWithUser } from '../../auth/interfaces/request-with-user.interface';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -67,7 +69,11 @@ export class UsersController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.usersService.deleteUser(id);
+  async remove(
+    @Param('id') id: string,
+    @Body() body: { password?: string },
+    @Request() req: RequestWithUser,
+  ) {
+    return this.usersService.deleteUser(id, body.password, req.user.sub);
   }
 }

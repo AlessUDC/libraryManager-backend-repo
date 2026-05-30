@@ -1,5 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 
+export type PrismaMock = {
+  [K in keyof PrismaClient]: PrismaClient[K] extends Function
+    ? jest.Mock<any, any>
+    : {
+        [M in keyof PrismaClient[K]]: jest.Mock<any, any>;
+      } & Record<string, any>;
+} & {
+  $transaction: jest.Mock<any, any>;
+} & Record<string, any>;
+
 /** Crea un mock parcial de PrismaClient con métodos jest.fn() */
 export function createPrismaMock() {
   const mock = {
@@ -46,7 +56,7 @@ export function createPrismaMock() {
     auditLog: {
       create: jest.fn(),
     },
-  } as unknown as jest.Mocked<PrismaClient>;
+  } as unknown as PrismaMock;
 
   mock.$transaction.mockImplementation(
     async (arg: unknown) => {
@@ -62,5 +72,3 @@ export function createPrismaMock() {
 
   return mock;
 }
-
-export type PrismaMock = ReturnType<typeof createPrismaMock>;

@@ -21,6 +21,11 @@ export class LoansController {
     return this.loansService.getLoansByUser(userId);
   }
 
+  @Get('by-barcode/:barcode')
+  findByBarcode(@Param('barcode') barcode: string) {
+    return this.loansService.getActiveLoanByBarcode(barcode);
+  }
+
   @Patch(':id/return')
   returnLoan(@Param('id') id: string, @Body() returnDto: ReturnLoanDto) {
     return this.loansService.returnLoan(id, returnDto);

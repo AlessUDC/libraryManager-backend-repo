@@ -25,24 +25,29 @@ export class IsDocumentNumberValidConstraint implements ValidatorConstraintInter
   validate(text: string, args: ValidationArguments) {
     if (!text || typeof text !== 'string') return false;
     const object = args.object as any;
-    if (object.documentType === 'DNI') {
+    const docType = object.documentType;
+    if (docType === 'DNI') {
       return /^[0-9]{8}$/.test(text);
     }
-    if (object.documentType === 'CE') {
+    if (docType === 'CE') {
       return /^[0-9]{9}$/.test(text);
+    }
+    if (!docType) {
+      return /^[0-9]{8}$/.test(text) || /^[0-9]{9}$/.test(text);
     }
     return false;
   }
 
   defaultMessage(args: ValidationArguments) {
     const object = args.object as any;
-    if (object.documentType === 'DNI') {
+    const docType = object.documentType;
+    if (docType === 'DNI') {
       return 'El DNI debe tener exactamente 8 dígitos numéricos';
     }
-    if (object.documentType === 'CE') {
+    if (docType === 'CE') {
       return 'El Carnet de Extranjería debe tener exactamente 9 dígitos numéricos';
     }
-    return 'Número de documento inválido';
+    return 'El número de documento debe tener 8 dígitos para DNI o 9 dígitos para CE';
   }
 }
 

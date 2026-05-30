@@ -1,5 +1,14 @@
-import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  Length,
+  Matches,
+  Validate,
+} from 'class-validator';
 import { Role } from '@prisma/client';
+import { IsDocumentNumberValidConstraint } from '../../../auth/dto/create-account.dto';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -7,7 +16,9 @@ export class UpdateUserDto {
   role?: Role;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'El código debe ser una cadena de texto' })
+  @Length(10, 10, { message: 'El código debe tener exactamente 10 dígitos' })
+  @Matches(/^[0-9]+$/, { message: 'El código solo debe contener números' })
   code?: string;
 
   @IsOptional()
@@ -35,7 +46,8 @@ export class UpdateUserDto {
   birthdate?: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'El número de documento debe ser una cadena de texto' })
+  @Validate(IsDocumentNumberValidConstraint)
   documentNumber?: string;
 
   @IsOptional()
@@ -45,6 +57,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   documentType?: string;
+  
   @IsOptional()
   @IsString()
   maritalStatus?: string;
@@ -54,11 +67,17 @@ export class UpdateUserDto {
   gender?: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'El teléfono móvil debe ser una cadena de texto' })
+  @Matches(/^\d{9}$/, {
+    message: 'El teléfono móvil debe tener exactamente 9 dígitos',
+  })
   mobilePhone?: string;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'El teléfono fijo debe ser una cadena de texto' })
+  @Matches(/^\d{9}$/, {
+    message: 'El teléfono fijo debe tener exactamente 9 dígitos',
+  })
   landlinePhone?: string;
 
   @IsOptional()

@@ -11,8 +11,15 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(configService: ConfigService) {
+    const databaseUrl = configService.get<string>('DATABASE_URL');
+    if (!databaseUrl) {
+      const errorMessage =
+        'DATABASE_URL is not defined. Please create a .env file in the backend directory containing your PostgreSQL database connection URL (e.g. DATABASE_URL=postgresql://user:pass@localhost:5433/db).';
+      console.error(colors.red.bold(`❌ Error: ${errorMessage}`));
+      throw new Error(errorMessage);
+    }
     const pool = new Pool({
-      connectionString: configService.get<string>('DATABASE_URL'),
+      connectionString: databaseUrl,
     });
     const adapter = new PrismaPg(pool);
     super({ adapter });

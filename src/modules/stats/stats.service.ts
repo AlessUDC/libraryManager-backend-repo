@@ -15,8 +15,8 @@ export class StatsService {
       categoriesCount,
       booksByCategory,
     ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.userData.count({ where: { activeState: true } }),
+      this.prisma.user.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where: { deletedAt: null, userData: { activeState: true } } }),
       this.prisma.book.count({ where: { activeState: true } }),
       this.prisma.copy.count({ where: { activeState: true } }),
       this.prisma.copy.count({

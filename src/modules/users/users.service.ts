@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAccountDto } from '../../auth/dto/create-account.dto';
@@ -30,7 +31,9 @@ export class UsersService {
     const { search, filterBy = 'all', role, page = 1, limit = 10 } = queryDto;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.UserWhereInput = {};
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+    };
 
     if (role) {
       where.role = role;
@@ -488,7 +491,7 @@ export class UsersService {
   // --- Métodos de Consulta y Actualización ---
 
   async findById(userId: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { userId },
       include: {
         userData: {
@@ -507,6 +510,8 @@ export class UsersService {
         },
       },
     });
+    if (!user || user.deletedAt) return null;
+    return user;
   }
 
   async findByEmail(email: string) {
@@ -517,14 +522,16 @@ export class UsersService {
   }
 
   async findByCode(code: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { code },
       include: { userData: true },
     });
+    if (!user || user.deletedAt) return null;
+    return user;
   }
 
   async findBySlug(slug: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { slug },
       include: {
         userData: {
@@ -545,6 +552,8 @@ export class UsersService {
         administrator: true,
       },
     });
+    if (!user || user.deletedAt) return null;
+    return user;
   }
 
   async updateUserData(userId: string, dto: UpdateProfileDto) {
@@ -776,38 +785,41 @@ export class UsersService {
     });
   }
 
-  async deleteUser(userId: string) {
+  async deleteUser(userId: string, adminPassword?: string, adminUserId?: string) {
+    if (adminUserId && adminPassword) {
+      const admin = await this.prisma.user.findUnique({
+        where: { userId: adminUserId },
+      });
+      if (!admin) {
+        throw new ForbiddenException('Administrador no encontrado');
+      }
+      const isPasswordValid = await bcrypt.compare(adminPassword, admin.password);
+      if (!isPasswordValid) {
+        throw new ForbiddenException('Contraseña de administrador incorrecta');
+      }
+    } else if (adminUserId) {
+      throw new ForbiddenException('La contraseña de administrador es requerida');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { userId },
       include: { userData: true },
     });
 
-    if (!user) return;
+    if (!user || user.deletedAt) {
+      throw new ConflictException('Usuario no encontrado');
+    }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 0. Eliminar préstamos (por integridad referencial)
-      await tx.loan.deleteMany({ where: { userId } });
-
-      // 1. Eliminar registros especializados
-      await tx.student.deleteMany({ where: { userId } });
-      await tx.teacher.deleteMany({ where: { userId } });
-      await tx.librarian.deleteMany({ where: { userId } });
-      await tx.administrator.deleteMany({ where: { userId } });
-
-      // 2. Eliminar el usuario
-      await tx.user.delete({ where: { userId } });
-
-      // 3. Eliminar UserData
-      if (user.userDataId) {
-        await tx.userData.delete({ where: { userDataId: user.userDataId } });
-      }
-
-      // 4. Eliminar Address si existía
-      if (user.userData?.addressId) {
-        await tx.address.delete({
-          where: { addressId: user.userData.addressId },
-        });
-      }
+    return this.prisma.user.update({
+      where: { userId },
+      data: {
+        deletedAt: new Date(),
+        userData: {
+          update: {
+            activeState: false,
+          },
+        },
+      },
     });
   }
 

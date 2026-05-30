@@ -54,6 +54,7 @@ export class ReservationsController {
   @Patch(':id/cancel')
   cancel(@Param('id') id: string, @Request() req: AuthRequest) {
     const userId = req.user.sub;
-    return this.reservationsService.cancelReservation(id, userId);
+    const userRole = req.user.role;
+    return this.reservationsService.cancelReservation(id, userId, userRole);
   }
 }
