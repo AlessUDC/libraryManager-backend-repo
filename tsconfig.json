@@ -15,15 +15,24 @@
     "outDir": "./dist",
     "incremental": true,
     "paths": {
-      "common/*": ["./src/common/*"]
+      "common/*": [
+        "./src/common/*"
+      ]
     },
-
-    "types": ["jest", "node"],
-
+    "types": [
+      "jest",
+      "node"
+    ],
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "prisma/seeds",
+    "simulate-test.ts"
+  ]
 }
